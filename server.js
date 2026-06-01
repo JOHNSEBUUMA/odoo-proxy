@@ -13,16 +13,23 @@ app.get("/", (req, res) => {
 });
 
 app.post("/proxy", async (req, res) => {
-  const { odooUrl, endpoint, payload } = req.body;
+  const { odooUrl, endpoint, payload, apiKey, login } = req.body;
 
   if (!odooUrl || !endpoint || !payload) {
     return res.status(400).json({ error: "Missing odooUrl, endpoint, or payload" });
   }
 
   try {
+    const headers = { "Content-Type": "application/json" };
+
+    if (apiKey) {
+      const credentials = Buffer.from(`${login || "__api__"}:${apiKey}`).toString("base64");
+      headers["Authorization"] = `Basic ${credentials}`;
+    }
+
     const response = await fetch(`${odooUrl}${endpoint}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
     });
 
