@@ -1,12 +1,19 @@
 const express = require("express");
-const cors = require("cors");
 const fetch = require("node-fetch");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// Manual CORS - allow everything
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") return res.sendStatus(200);
+  next();
+});
+
+app.use(express.json({ limit: "10mb" }));
 
 app.get("/", (req, res) => {
   res.json({ status: "Odoo Proxy running ✓" });
@@ -33,8 +40,12 @@ app.post("/proxy", async (req, res) => {
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
-    res.json(data);
+    const text = await response.text();
+    try {
+      res.json(JSON.parse(text));
+    } catch {
+      res.status(500).json({ error: "Non-JSON response from Odoo", body: text.slice(0, 500) });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
